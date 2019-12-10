@@ -3,6 +3,7 @@ import { Link } from "gatsby";
 import cardStyles from "./post-card.module.scss";
 import { stopPropCallback } from "../../utils/preventCallback";
 import { UserProfilePic } from "../user-profile-pic";
+import TransitionLink from "gatsby-plugin-transition-link";
 
 /**
  * @param {string} title - The title of the post
@@ -50,15 +51,22 @@ export const PostCard = ({
 			role="listitem"
 		>
 			<div className={cardStyles.cardContents}>
-				<Link
+				<TransitionLink
 					to={`/posts${slug}`}
 					onClick={stopPropCallback}
 					className="unlink"
+					entry={{
+						state: { isEntryPage: true }
+					}}
+					exit={{
+						state: { isEntryPage: false },
+						length: 0.6
+					}}
 				>
 					<h2 className={cardStyles.header} ref={headerLink}>
 						{title}
 					</h2>
-				</Link>
+				</TransitionLink>
 				<p className={cardStyles.authorName}>
 					<span>by&nbsp;</span>
 					<Link

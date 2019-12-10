@@ -1,10 +1,44 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, forwardRef } from "react";
 import { graphql, Link } from "gatsby";
 import BackIcon from "../../assets/icons/back.svg";
 import layoutStyles from "./layout.module.scss";
 import "../../global.scss";
 import { DarkLightButton } from "../dark-light-button";
 import { ThemeContext, setThemeColorsToVars } from "../theme-context";
+import TransitionLink, { TransitionState } from "gatsby-plugin-transition-link";
+import posed from "react-pose";
+
+const Main = forwardRef(({ children, ...props }, ref) => (
+	<main {...props} ref={ref}>
+		{children}
+	</main>
+));
+// posed.main is not a thing
+const AnimMainTed = posed.div({
+	enteringPage: {
+		// When back btn is pressed, entry page (list) should go -100 -> 0, but others should go to 0 -> 100vw
+		// Otherwise, the entry page (post) should go from 100, but the list (not back btn)
+		// isEntryPage = true
+		x: 0,
+
+		transition: ({ isBackBtn }) => ({
+			type: "tween",
+			from: isBackBtn ? "-100vw" : "100vw",
+			key: "x",
+			duration: 600
+		})
+	},
+
+	leavingPage: {
+		x: ({ isBackBtn }) => (isBackBtn ? "100vw" : "-100vw"),
+
+		// isEntryPage = true
+		transition: {
+			type: "tween",
+			duration: 600
+		}
+	}
+});
 
 export const Layout = ({ location, children }) => {
 	// eslint-disable-next-line no-undef
@@ -43,19 +77,45 @@ export const Layout = ({ location, children }) => {
 					aria-label={"Toolbar for primary action buttons"}
 				>
 					{!isBase && (
-						<Link
+						<TransitionLink
 							className={`${layoutStyles.backBtn} baseBtn`}
 							to={`/`}
+							exit={{
+								state: { isBackBtn: true, isEntryPage: false },
+								length: 0.6
+							}}
+							entry={{
+								state: { isBackBtn: true, isEntryPage: true }
+							}}
 							aria-label="Go back"
 						>
 							<BackIcon />
-						</Link>
+						</TransitionLink>
 					)}
 					<DarkLightButton />
 				</header>
-				<div className={!isBlogPost ? "listViewContent" : "postViewContent"}>
-					{children}
-				</div>
+				<TransitionState>
+					{transitionProps => {
+						const {
+							transitionStatus,
+							current: { state: { isBackBtn = false } = {} }
+						} = transitionProps;
+						return (
+							<AnimMainTed
+								className={!isBlogPost ? "listViewContent" : "postViewContent"}
+								pose={
+									!["entering", "entered"].includes(transitionStatus)
+										? "leavingPage"
+										: "enteringPage"
+								}
+								posedKey={`${isBackBtn}${transitionStatus}${location.pathname}`}
+								isBackBtn={isBackBtn}
+							>
+								{children}
+							</AnimMainTed>
+						);
+					}}
+				</TransitionState>
 			</div>
 		</ThemeContext.Provider>
 	);
